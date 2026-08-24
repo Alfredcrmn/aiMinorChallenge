@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -72,6 +73,70 @@ def describe_file(path: Path) -> dict[str, str | int | float]:
     }
 
 
+def write_summary(records: list[dict[str, str | int | float]], output_path: Path) -> None:
+    """Write a human-readable Markdown summary beside the detailed CSV."""
+    readable = [record for record in records if record["status"] == "readable"]
+    unreadable = [record for record in records if record["status"] == "unreadable"]
+
+    groups = Counter(str(record["dataset_group"]) for record in records)
+    shapes = Counter(
+        (str(record["dataset_group"]), str(record["shape"]))
+        for record in readable
+    )
+    dtypes = Counter(
+        (str(record["dataset_group"]), str(record["dtype"]))
+        for record in readable
+    )
+
+    with output_path.open("w", encoding="utf-8") as summary_file:
+        summary_file.write("# REHAB Dataset Inventory Summary\n\n")
+        summary_file.write(
+            "This report describes the files without cleaning or transforming them.\n\n"
+        )
+        summary_file.write("## Overall status\n\n")
+        summary_file.write(f"- Total files: **{len(records)}**\n")
+        summary_file.write(f"- Readable files: **{len(readable)}**\n")
+        summary_file.write(f"- Unreadable files: **{len(unreadable)}**\n\n")
+
+        summary_file.write("## Files by dataset group\n\n")
+        summary_file.write("| Dataset group | Files |\n|---|---:|\n")
+        for group, count in sorted(groups.items()):
+            summary_file.write(f"| `{group}` | {count} |\n")
+        summary_file.write("\n")
+
+        summary_file.write("## Shapes by dataset group\n\n")
+        summary_file.write("| Dataset group | Shape | Files |\n|---|---|---:|\n")
+        for (group, shape), count in sorted(shapes.items()):
+            summary_file.write(f"| `{group}` | `{shape}` | {count} |\n")
+        summary_file.write("\n")
+
+        summary_file.write("## Data types by dataset group\n\n")
+        summary_file.write("| Dataset group | Data type | Files |\n|---|---|---:|\n")
+        for (group, dtype), count in sorted(dtypes.items()):
+            summary_file.write(f"| `{group}` | `{dtype}` | {count} |\n")
+        summary_file.write("\n")
+
+        summary_file.write("## Unreadable files\n\n")
+        if unreadable:
+            for record in unreadable:
+                summary_file.write(f"- `{record['file']}`: {record['error']}\n")
+        else:
+            summary_file.write("None found.\n")
+        summary_file.write("\n")
+
+        summary_file.write("## Representative readable files\n\n")
+        summary_file.write("| Dataset group | File | Shape | Data type |\n|---|---|---|---|\n")
+        seen_groups: set[str] = set()
+        for record in readable:
+            group = str(record["dataset_group"])
+            if group not in seen_groups:
+                summary_file.write(
+                    f"| `{group}` | `{record['file']}` | `{record['shape']}` "
+                    f"| `{record['dtype']}` |\n"
+                )
+                seen_groups.add(group)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -94,11 +159,14 @@ def main() -> None:
     fieldnames = list(records[0])
     output_path = args.output if args.output.is_absolute() else SCRIPT_DIR / args.output
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    summary_path = output_path.with_name(f"{output_path.stem}_summary.md")
 
     with output_path.open("w", newline="", encoding="utf-8") as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(records)
+
+    write_summary(records, summary_path)
 
     readable = [record for record in records if record["status"] == "readable"]
     unreadable = [record for record in records if record["status"] == "unreadable"]
@@ -107,6 +175,7 @@ def main() -> None:
     print(f"Readable files: {len(readable)}")
     print(f"Unreadable files: {len(unreadable)}")
     print(f"Inventory written to: {output_path}")
+    print(f"Readable summary written to: {summary_path}")
     print("\nFiles by dataset group:")
     groups: dict[str, int] = {}
     for record in records:
