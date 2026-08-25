@@ -1,0 +1,89 @@
+# macOS and filesystem metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+.hypothesis/
+.tox/
+.nox/
+
+# Packaging and build outputs
+build/
+dist/
+site/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Coverage and profiling
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+*.cover
+*.prof
+
+# Jupyter and IPython
+.ipynb_checkpoints/
+profile_default/
+ipython_config.py
+
+# Environment variables and local configuration
+.env
+.env.*
+!.env.example
+*.local
+
+# IDE and editor settings
+.idea/
+.vscode/
+*.code-workspace
+*.swp
+*.swo
+*~
+
+# Logs, temporary files, and backups
+*.log
+*.tmp
+*.temp
+*.bak
+*.corrupted.bak
+*.orig
+*.rej
+
+# Generated ML experiment outputs
+artifacts/
+checkpoints/
+models/
+outputs/
+runs/
+wandb/
+mlruns/
+lightning_logs/
+tensorboard/
+*.ckpt
+*.onnx
+*.pt
+*.pth
+
+# Local data-analysis exports (source .npy arrays remain tracked)
+reports/generated/
+figures/generated/
