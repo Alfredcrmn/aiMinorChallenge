@@ -1,0 +1,8 @@
+numpy
+pandas
+matplotlib
+seaborn
+scipy
+jupyterlab
+ipykernel
+fg-data-profiling
