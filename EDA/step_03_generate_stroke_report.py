@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""EDA Step 3 — generate stroke_report.html from the complete raw dataset.
+"""EDA Step 3 — generate stroke_report.html from the processed dataset.
 
-This profiles the in-memory DataFrame built from all 32 raw ``.npy`` files.
+This profiles the in-memory DataFrame built from all 32 processed ``.npy`` files.
 Minimal profiling mode is intentional: it calculates the guide's initial
 dataset overview for every row while avoiding costly pairwise interactions on
-more than four million timepoints. It does not sample or preprocess signals.
+more than four million timepoints. It does not sample or further process signals.
 """
 
 from __future__ import annotations
@@ -16,30 +16,30 @@ import pandas as pd
 from data_profiling import ProfileReport
 
 try:
-    from EDA.step_02_join_all_raw_movements import load_all_raw_movements
+    from EDA.step_02_join_all_raw_movements import load_all_movements
 except ModuleNotFoundError:  # Permit direct execution from inside EDA/.
-    from step_02_join_all_raw_movements import load_all_raw_movements  # type: ignore[no-redef]
+    from step_02_join_all_raw_movements import load_all_movements  # type: ignore[no-redef]
 
 
 def generate_report(
     output: str | Path,
     frame: pd.DataFrame | None = None,
-    raw_dir: str | Path | None = None,
+    data_dir: str | Path | None = None,
 ) -> Path:
     """Build and write the full-dataset EDA overview; return its output path."""
     output_path = Path(output).resolve()
-    if frame is not None and raw_dir is not None:
-        raise ValueError("Pass either an existing frame or raw_dir, not both.")
-    dataset_frame = frame if frame is not None else load_all_raw_movements(raw_dir)
+    if frame is not None and data_dir is not None:
+        raise ValueError("Pass either an existing frame or data_dir, not both.")
+    dataset_frame = frame if frame is not None else load_all_movements(data_dir)
     profile = ProfileReport(
         dataset_frame,
-        title="REHAB Exercise Raw Dataset — All Movements",
+        title="REHAB Exercise Processed Dataset — All Movements",
         minimal=True,
         dataset={
             "description": (
-                "All 4,616 raw REHAB exercise recordings joined at timepoint "
+                "All 4,616 processed REHAB exercise recordings joined at timepoint "
                 "level. The target variable is movement_type; record_id is the "
-                "independent observation unit. No signal preprocessing applied."
+                "independent observation unit. No additional preprocessing applied."
             ),
             "url": "https://doi.org/10.1038/s41597-026-07802-2",
         },
@@ -57,9 +57,9 @@ def main() -> None:
         default=project_root / "stroke_report.html",
         help="HTML destination (default: project-root stroke_report.html)",
     )
-    parser.add_argument("--raw-dir", type=Path)
+    parser.add_argument("--data-dir", type=Path)
     args = parser.parse_args()
-    print(generate_report(args.output, raw_dir=args.raw_dir))
+    print(generate_report(args.output, data_dir=args.data_dir))
 
 
 if __name__ == "__main__":
