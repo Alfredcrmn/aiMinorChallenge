@@ -6,3 +6,4 @@ scipy
 jupyterlab
 ipykernel
 fg-data-profiling
+"setuptools<82"
