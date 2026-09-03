@@ -1,5 +1,3 @@
-"""Unit tests for the REHAB feature-dataset construction."""
-
 from __future__ import annotations
 
 import math
