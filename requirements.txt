@@ -1,0 +1,10 @@
+numpy
+scikit-learn
+pandas
+matplotlib
+seaborn
+scipy
+jupyterlab
+ipykernel
+fg-data-profiling
+setuptools<82
