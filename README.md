@@ -15,13 +15,26 @@ python scripts/create_eda.py
 python scripts/validate_models.py
 ```
 
+`requirements.txt` includes **fg-data-profiling**, which is required for the EDA
+step as well as NumPy, pandas, and scikit-learn for the dataset/model scripts.
+Use the activated environment for every command; the profiling import is
+`from data_profiling import ProfileReport`.
+
 Place the original processed `.npy` files under
 `REHAB/Rehab_exercise/d02_processed_data/` before running. The files are not
 downloaded by the scripts. Profiling and model searches can take several minutes.
 
-Recorded library versions: NumPy 2.5.3, pandas 2.3.3, SciPy 1.18.1,
-scikit-learn 1.9.1, and fg-data-profiling 4.20.0. Dependencies are not pinned, so
-new installations may produce slightly different results.
+### Recorded environments
+
+| Run | Python and numerical/model libraries | Profiling |
+|---|---|---|
+| Historical all-data CV (before cleaning) | Python 3.12.14; NumPy 2.5.3; pandas 2.3.3; SciPy 1.18.1; scikit-learn 1.9.1 | Not used by those model runs |
+| Current cleaned holdout workflow and EDA | Python 3.12.14; NumPy 2.5.3; pandas 2.3.3; SciPy 1.18.1; scikit-learn 1.9.1 | fg-data-profiling 4.20.0 |
+
+These local runs used the same numerical/model library versions, but different
+datasets and evaluation protocols. There is no separately locked historical
+environment. Dependencies in `requirements.txt` are not pinned, so new
+installations may produce slightly different results.
 
 ## Data preparation and cleaning
 
@@ -108,6 +121,22 @@ observed effect of regularization. Supporting CSVs in that folder contain split
 assignments, development model comparisons, all tuning candidates, metrics,
 class-level scores, and the confusion matrix (rows = actual, columns = predicted).
 
+### Current recorded results
+
+The cleaned dataset contains **3,620 recordings**: **2,896 development** and
+**724 test** (23,168 and 5,792 windows respectively; **28,960 windows total**).
+The selected model is Extra Trees with 200 trees, `max_features="sqrt"`, and
+`min_samples_leaf=1`.
+
+| Split | Accuracy | Macro F1 |
+|---|---:|---:|
+| Development training (fitted data) | 100.00% | 100.00% |
+| Development validation (five-fold CV) | 95.67% | 95.43% |
+| Held-out test | **95.32%** | **94.90%** |
+
+Values come from [data/holdout/metrics.csv](data/holdout/metrics.csv). Training
+scores are resubstitution scores, not generalization estimates.
+
 **Evaluation limits:** this is a retrospective holdout. Earlier experiments used
 all recordings, so it is not a pristine external cohort. The new run separates
 test data from fitting, selection, tuning, and EDA, but cannot undo prior
@@ -115,9 +144,9 @@ exploration. Do not adjust models in response to this test score. Patient IDs
 are unavailable, so this is recording-separated, not patient-independent,
 evaluation. Window-level scores do not measure clinical benefit.
 
-## Earlier exploratory experiments
+## Historical exploratory experiments
 
-The original scripts remain reproducible:
+The original scripts remain available:
 
 ```bash
 python scripts/evaluate_models.py
@@ -125,13 +154,30 @@ python scripts/tune_models.py
 ```
 
 They use all-data grouped CV and produce `data/model_results.csv` and
-`data/tuning_results.csv`. Their existing scores used the earlier, undeduplicated dataset (4,257 recordings).
-They are **exploratory tuning estimates** and
-must not be presented as held-out test results. The earlier best settings were
-200 trees, `max_features="sqrt"`, and `min_samples_leaf=1` for both tree models
-(Extra Trees macro F1 95.97%, Random Forest 95.20%). The corrected workflow
-selects parameters again using only cleaned development data. Its scores should
-not be compared with the historical scores as a pure model improvement: both the
-data cleaning and evaluation protocol changed.
+`data/tuning_results.csv`. The existing files are **historical exploratory
+estimates from the pre-cleaning dataset**, not current held-out results.
+Rerunning these scripts now uses the current cleaned CSV and overwrites those
+files; it does not reproduce the old dataset or old scores. Use
+`validate_models.py` for the current development/validation/test workflow.
+
+## Regression tests
+
+Run from the project folder with the environment activated:
+
+```bash
+python -m unittest discover -s tests -p 'test_*.py' -v
+```
+
+No additional test dependency is required. `tests/test_data_split.py` exercises
+the actual `scripts/data_split.py`: repeatability, recording separation,
+class-stratified 80/20 allocation, mask/index alignment, conflicting-label
+rejection, and development validation folds that exclude the test recordings.
+
+`tests/test_cleaning.py` runs the real builder on temporary synthetic `.npy`
+files. It checks paired NaN/infinity removal, within-exercise full-recording
+deduplication, all-zero removal, retention when only one sensor is zero,
+original sample indices, eight-window groups, audit counts, shape/count errors,
+exclusion of exercise 014, source preservation, and deterministic CSV output.
+The tests do not modify the real dataset or retrain models.
 
 Reruns overwrite the corresponding generated outputs. No trained model is saved.
