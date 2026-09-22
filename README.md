@@ -2,6 +2,36 @@
 
 Classify REHAB exercises from windowed sensor features.
 
+## Corrections made
+
+The initial presentation used **KNN with k = 1**. A subsequent review identified
+data leakage associated with the restructuring of exercise 14 and duplicate
+recordings. This affected the independence of the evaluation data and could
+have favored the reported results. We made the following adjustments:
+
+- **Data preparation:** we excluded exercise 14 (`014_1.npy` and `014_2.npy`)
+  and removed 627 exact duplicate recordings and 10 all-zero recordings before
+  splitting the data. The updated dataset contains **3,620 recordings across
+  15 exercises**.
+- **Splitting and validation:** we reserved 20% of recordings for testing.
+  We compared and tuned models on the remaining 80% using five-fold
+  `GroupKFold`, keeping all eight windows from each recording together.
+  For models that require standardization, the scaler is fitted only on the
+  training data within each fold.
+- **Model change:** after repeating the comparison with the corrected data,
+  we selected **Extra Trees**, implemented with scikit-learn, using
+  `n_estimators=200`, `max_features="sqrt"`, and `min_samples_leaf=1`, based on
+  validation macro F1. The test set was excluded from model selection and tuning.
+
+The updated model achieved **95.32% test accuracy and 94.90% test macro F1**,
+measured **per window**, as recorded in the
+current results. The figures in the initial
+presentation refer to the previous version and remain as historical context.
+They are not directly comparable with the current results because the data,
+evaluation protocol, and evaluation unit changed (previously per recording,
+now per window). The evaluation reportdetails the
+configuration and results of the corrected version.
+
 ## Replicate the complete workflow
 
 Run from the project folder (tested with Python 3.12):
