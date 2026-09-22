@@ -159,25 +159,3 @@ estimates from the pre-cleaning dataset**, not current held-out results.
 Rerunning these scripts now uses the current cleaned CSV and overwrites those
 files; it does not reproduce the old dataset or old scores. Use
 `validate_models.py` for the current development/validation/test workflow.
-
-## Regression tests
-
-Run from the project folder with the environment activated:
-
-```bash
-python -m unittest discover -s tests -p 'test_*.py' -v
-```
-
-No additional test dependency is required. `tests/test_data_split.py` exercises
-the actual `scripts/data_split.py`: repeatability, recording separation,
-class-stratified 80/20 allocation, mask/index alignment, conflicting-label
-rejection, and development validation folds that exclude the test recordings.
-
-`tests/test_cleaning.py` runs the real builder on temporary synthetic `.npy`
-files. It checks paired NaN/infinity removal, within-exercise full-recording
-deduplication, all-zero removal, retention when only one sensor is zero,
-original sample indices, eight-window groups, audit counts, shape/count errors,
-exclusion of exercise 014, source preservation, and deterministic CSV output.
-The tests do not modify the real dataset or retrain models.
-
-Reruns overwrite the corresponding generated outputs. No trained model is saved.
