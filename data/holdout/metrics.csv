@@ -1,0 +1,4 @@
+split,accuracy,f1_macro
+training (resubstitution),1.0,1.0
+validation (5-fold CV),0.956663837770234,0.954297417561882
+test (held-out recordings),0.9532113259668509,0.9489912299773822

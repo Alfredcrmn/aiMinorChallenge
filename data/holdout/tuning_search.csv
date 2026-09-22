@@ -1,0 +1,17 @@
+model,params,f1_macro,accuracy
+Extra trees,"{""max_features"": ""sqrt"", ""min_samples_leaf"": 1, ""n_estimators"": 100}",0.9514966099932126,0.9541595944255852
+Extra trees,"{""max_features"": ""sqrt"", ""min_samples_leaf"": 1, ""n_estimators"": 200}",0.954297417561882,0.956663837770234
+Extra trees,"{""max_features"": ""sqrt"", ""min_samples_leaf"": 2, ""n_estimators"": 100}",0.9440825901618876,0.9469937764278482
+Extra trees,"{""max_features"": ""sqrt"", ""min_samples_leaf"": 2, ""n_estimators"": 200}",0.9459900060007138,0.948892710380561
+Extra trees,"{""max_features"": 0.5, ""min_samples_leaf"": 1, ""n_estimators"": 100}",0.9518657036248008,0.9542021023167173
+Extra trees,"{""max_features"": 0.5, ""min_samples_leaf"": 1, ""n_estimators"": 200}",0.9532842498769295,0.9554971413257102
+Extra trees,"{""max_features"": 0.5, ""min_samples_leaf"": 2, ""n_estimators"": 100}",0.9468061300395361,0.9495410487761301
+Extra trees,"{""max_features"": 0.5, ""min_samples_leaf"": 2, ""n_estimators"": 200}",0.947997575563976,0.950619677208028
+Random forest,"{""max_features"": ""sqrt"", ""min_samples_leaf"": 1, ""n_estimators"": 100}",0.9379153480959583,0.9417715591686022
+Random forest,"{""max_features"": ""sqrt"", ""min_samples_leaf"": 1, ""n_estimators"": 200}",0.9413020332091822,0.944663212435233
+Random forest,"{""max_features"": ""sqrt"", ""min_samples_leaf"": 2, ""n_estimators"": 100}",0.932034875952484,0.9356416383777022
+Random forest,"{""max_features"": ""sqrt"", ""min_samples_leaf"": 2, ""n_estimators"": 200}",0.9335354179812999,0.9373251295336786
+Random forest,"{""max_features"": 0.5, ""min_samples_leaf"": 1, ""n_estimators"": 100}",0.9314316209850947,0.9349940444285629
+Random forest,"{""max_features"": 0.5, ""min_samples_leaf"": 1, ""n_estimators"": 200}",0.935265158840499,0.938619424096242
+Random forest,"{""max_features"": 0.5, ""min_samples_leaf"": 2, ""n_estimators"": 100}",0.9251682317627534,0.9292100678935145
+Random forest,"{""max_features"": 0.5, ""min_samples_leaf"": 2, ""n_estimators"": 200}",0.9270400523985236,0.9308931123816331

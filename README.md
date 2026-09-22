@@ -2,95 +2,136 @@
 
 Classify REHAB exercises from windowed sensor features.
 
-## 1. Setup
+## Replicate the complete workflow
 
-Run these commands from the project folder. Python 3.12 was used for the recorded results.
+Run from the project folder (tested with Python 3.12):
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install numpy pandas scikit-learn
-```
-
-The three scripts only need these packages. The recorded environment used NumPy
-2.5.3, pandas 2.3.3, scikit-learn 1.9.1, and SciPy 1.18.1; results may vary with
-library versions.
-
-Place the original processed `.npy` files in:
-
-```text
-REHAB/Rehab_exercise/d02_processed_data/
-```
-
-The scripts use paired files `000_1.npy` / `000_2.npy` through `015_1.npy` /
-`015_2.npy`. **Both `014_1.npy` and `014_2.npy` are skipped.**
-
-## 2. Build the dataset
-
-```bash
+python -m pip install -r requirements.txt
 python scripts/build_exercise_dataset.py
+python scripts/create_eda.py
+python scripts/validate_models.py
 ```
 
-Creates `data/rehab_exercise.csv`: **34,056 rows**, one per window.
-Each original recording is split into eight non-overlapping windows of 110 points.
-Matching sample indices in the two sensor files are treated as the same recording.
+Place the original processed `.npy` files under
+`REHAB/Rehab_exercise/d02_processed_data/` before running. The files are not
+downloaded by the scripts. Profiling and model searches can take several minutes.
 
-- **72 feature columns:** six statistics for each of 12 channels: mean, standard
-  deviation, RMS, range, mean absolute difference, and slope.
-- **`exercise`:** target label (`0`–`13` and `15`).
-- **`sample_id`:** exercise and original sample index.
-- **`repetition_id`:** unique recording ID, shared by its eight windows.
-- **`window`:** window number (`1`–`8`).
+Recorded library versions: NumPy 2.5.3, pandas 2.3.3, SciPy 1.18.1,
+scikit-learn 1.9.1, and fg-data-profiling 4.20.0. Dependencies are not pinned, so
+new installations may produce slightly different results.
 
-Here, a repetition ID identifies a source recording, not an individually detected
-motion cycle. The supplied processed signals are used without additional scaling
-or filtering during dataset creation.
+## Data preparation and cleaning
 
-## 3. Compare five models
+The original request specifically selected the **processed** data and excluded
+**both `014_1.npy` and `014_2.npy`**. This is a scope exclusion, not a claim that
+exercise 014 is clinically invalid or that both files failed quality checks.
+
+The [source paper](https://doi.org/10.1038/s41597-026-07802-2), p. 9, describes
+upstream cleaning: truncation or padding to 880 points, a moving-average filter
+with a 10-point window, zero-mean normalization, and removal of erroneous samples.
+These steps belong to the dataset authors. This repository does not reconstruct
+raw acquisition cleaning or claim to have performed it. Filtering already
+processed signals again would change the requested input.
+
+Our dataset builder performs the following ETL:
+
+1. **Extract:** load paired sensor arrays with `allow_pickle=False`, check matching
+   sample counts and shape `(recordings, 880, 6)`.
+2. **Clean:** remove an entire paired recording if either sensor contains NaN or
+   infinity; deduplicate exact full paired signals within each exercise; then remove
+   recordings that are entirely zero across both sensors. Preserve original sample
+   indices. `data/cleaning_summary.csv` records **0 nonfinite removals, 627 duplicate
+   removals, and 10 all-zero removals**, leaving **3,620 recordings**. These counts
+   are sequential and do not overlap. All-zero recordings contain no usable signal;
+   their underlying cause (padding, rest, or failed acquisition) is not inferred.
+3. **Transform:** combine the two sensor configurations into 12 channels, split
+   each recording into eight non-overlapping windows of 110 points (about 2.2 s
+   at 50 Hz), and extract six statistics per channel.
+4. **Load:** write `data/rehab_exercise.csv` with **28,960 rows and 76 columns**.
+
+Each row contains 72 features (mean, population standard deviation, RMS, range,
+mean absolute difference, and slope) plus:
+
+| Column | Meaning |
+|---|---|
+| `exercise` | Target label: 0–13 and 15 |
+| `sample_id` | Exercise and original sample index |
+| `repetition_id` | Unique source recording ID, shared by all eight windows |
+| `window` | Window number, 1–8 |
+
+Matching sample indices across `_1` and `_2` are assumed to refer to one recording.
+A recording ID is not a detected motion-cycle ID or a patient ID. Existing rest
+and padding are preserved; no valid-length masks are supplied. Individual duplicate feature
+vectors, extreme values, and zero windows within otherwise informative recordings
+are not automatically removed; they may represent repeated or stationary movement.
+Only exact whole-recording copies and entirely all-zero recordings are removed.
+The final development/test split has no identical feature-window vectors in common.
+
+## EDA report
+
+Open [EDA/rehab_profile.html](EDA/rehab_profile.html) for the **fg-data-profiling**
+report and [EDA/findings.md](EDA/findings.md) for a short interpretation.
+The library is imported as `from data_profiling import ProfileReport`.
+
+The report covers every development window, all 72 features, and the categorical
+exercise label. It includes distributions, missingness, correlations, duplicates,
+and automated alerts. Identifiers and window numbers are omitted. Test values
+are excluded from EDA; pairwise scatter plots are disabled to keep the report
+manageable. EDA does not automatically drop features or observations.
+
+## Training, validation, and test evaluation
+
+`validate_models.py` uses the reproducible split in `data_split.py`:
+
+- Reserve **20% of recording IDs** for the final test, stratified by exercise,
+  using `random_state=42`. The remaining 80% form the development set.
+- Compare logistic regression, linear SVM, KNN, Random Forest, and Extra Trees
+  using **five-fold GroupKFold within development only**. All windows from a
+  recording stay together. Scaling is fitted inside the training folds.
+- Select the top two models by development macro F1, then tune them on those
+  development folds. The tree grid tests 100/200 trees, `max_features` of
+  `sqrt`/0.5, and `min_samples_leaf` of 1/2.
+- Choose the winner by validation macro F1, refit on all development recordings,
+  then evaluate that single winner on the held-out test once.
+
+IDs, window number, and the target are excluded from predictive features. Split
+assertions check recording separation. Macro F1 is the primary metric because
+it weights exercise classes equally. Reports also include accuracy, balanced
+accuracy, macro precision/recall, and weighted F1.
+
+Read [data/holdout/report.md](data/holdout/report.md) for the train/validation/test
+comparison, best parameters, weakest classes, frequent confusions, and the
+observed effect of regularization. Supporting CSVs in that folder contain split
+assignments, development model comparisons, all tuning candidates, metrics,
+class-level scores, and the confusion matrix (rows = actual, columns = predicted).
+
+**Evaluation limits:** this is a retrospective holdout. Earlier experiments used
+all recordings, so it is not a pristine external cohort. The new run separates
+test data from fitting, selection, tuning, and EDA, but cannot undo prior
+exploration. Do not adjust models in response to this test score. Patient IDs
+are unavailable, so this is recording-separated, not patient-independent,
+evaluation. Window-level scores do not measure clinical benefit.
+
+## Earlier exploratory experiments
+
+The original scripts remain reproducible:
 
 ```bash
 python scripts/evaluate_models.py
-```
-
-Evaluates logistic regression, linear SVM, KNN, Random Forest, and Extra Trees
-using **five-fold GroupKFold grouped by `repetition_id`**. All windows from a
-recording stay in the same fold. IDs and window numbers are excluded from model
-inputs; scaling for logistic regression, SVM, and KNN is fitted within each fold.
-
-Creates `data/model_results.csv` with the fold mean and standard deviation of
-accuracy, balanced accuracy, macro precision, macro recall, macro F1, and weighted F1.
-
-## 4. Tune the best two models
-
-```bash
 python scripts/tune_models.py
 ```
 
-Tunes Extra Trees and Random Forest using the same grouped folds, selecting the
-highest mean macro F1. The search checks eight combinations per model:
+They use all-data grouped CV and produce `data/model_results.csv` and
+`data/tuning_results.csv`. Their existing scores used the earlier, undeduplicated dataset (4,257 recordings).
+They are **exploratory tuning estimates** and
+must not be presented as held-out test results. The earlier best settings were
+200 trees, `max_features="sqrt"`, and `min_samples_leaf=1` for both tree models
+(Extra Trees macro F1 95.97%, Random Forest 95.20%). The corrected workflow
+selects parameters again using only cleaned development data. Its scores should
+not be compared with the historical scores as a pure model improvement: both the
+data cleaning and evaluation protocol changed.
 
-```python
-{
-    "n_estimators": [100, 200],
-    "max_features": ["sqrt", 0.5],
-    "min_samples_leaf": [1, 2],
-}
-```
-
-Creates `data/tuning_results.csv` with the best parameters and the same metrics.
-Both models use `random_state=42`. The recorded best parameters for both were:
-
-```python
-{"n_estimators": 200, "max_features": "sqrt", "min_samples_leaf": 1}
-```
-
-| Tuned model | Accuracy | Macro F1 |
-|---|---:|---:|
-| Extra Trees | 96.10% | 95.97% |
-| Random Forest | 95.35% | 95.20% |
-
-These are tuning cross-validation scores, not independent test scores. Grouping
-prevents recordings from crossing folds, but cannot ensure patient separation
-because patient IDs are unavailable. No trained model is saved.
-
-Rerunning each script overwrites its corresponding output CSV.
+Reruns overwrite the corresponding generated outputs. No trained model is saved.
